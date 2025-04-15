@@ -112,6 +112,7 @@ def main():
     blue = 0
     on_vector = False
     target_position = (0,0)
+    last_mass=1
 
     while running:
         for event in pg.event.get():
@@ -125,7 +126,8 @@ def main():
                 else:
                     vector_position = pg.mouse.get_pos()
 
-                    bodies.append( Body(x=target_position[0],
+                    bodies.append( Body(mass=last_mass,
+                                        x=target_position[0],
                                         y=target_position[1],
                              vx = (vector_position[0] - target_position[0]) /
                                   V_REDUCE,
@@ -137,6 +139,11 @@ def main():
             if event.type == pg.KEYUP:
                 if event.key == pg.K_ESCAPE:
                     running = False
+
+                if event.key == pg.K_RIGHTBRACKET:
+                    last_mass+=1
+                if event.key == pg.K_LEFTBRACKET:
+                    last_mass-=1 if last_mass >= 2 else 1
 
                 if event.key == pg.K_q:
                     red += 10
