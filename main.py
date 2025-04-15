@@ -6,51 +6,112 @@ PURPOSE OF PROJECT
 AFTER 30 MINUTES I COULDN'T THINK OF ANYTHING.
 JUST FUCK AROUND WITH PYGAME
 
+2025-04-15 PHASE 2
+MY INITIAL IDEA WAS ILL FORMED
+
+TRY TO DO A BASIC GRAVITATIONAL SIMULATION.
+CLICK ONCE TO START TO CREATE A NEW BODY
+CLICK AGAIN TO INDICATE THE DIRECTION AND VELOCITY OF THE NEW BODY
+
+IGNORE COLLISIONS
+
+USE + AND - TO CHANGE THE STARTING SIZE (MASS) OF THE BODY
+
+BODY NEEDS
+    POSITION 2D
+    VELOCITY 2D
+
+ACCELERATION CALCULATION
+    D = DISTANCE BETWEEN BODIES
+    FORCE = <SOME CONSTANT> * (M1*M2) / D^2
+    ACCELERATION = FORCE / MASS
+    VEL CHANGE =
+        ACCELERATION APPLIED IN THE VECTOR BETWEEN THE MASSES
+        ANGLE BETWEEN X AXIS AND ACCEL VECTOR =
+            Atan2( y2 - y1 / x2 - x1 )
+        ACCELERATION COMPONENTS
+            AY = A SIN(THETA)
+            AX = A COS(THETA)
+    AND SO ON
 """
+import itertools
 import math
 
 import pygame as pg
 
-SCREEN_SIZE = pg.Vector2(1200,900)
+WIDTH = 1200
+HEIGHT = 900
+SCREEN_SIZE = pg.Vector2(WIDTH, HEIGHT)
 pg.init()
 screen = pg.display.set_mode(SCREEN_SIZE)
 clock = pg.time.Clock()
-things = []
-lower_limit = 65
-limit = 100
+bodies = []
+V_REDUCE = 50
+TOO_CLOSE = 15
+ATTRACTION_CONSTANT = 1
 
+class Body():
+    def __init__(self, mass=10, x=0, y=0, vx=0.0, vy=0.0):
+        self.mass = mass
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
 
-def distance(thing, neighbor):
-    dx = abs(thing[0] - neighbor[0])
-    dy = abs(thing[1] - neighbor[1])
+    def draw(self, r, g, b):
+        pg.draw.circle(screen, (r, g, b), (self.x, self.y),
+                       self.mass)
+
+def calc_distance(point1, point2):
+    dx = abs(point1.x - point2.x)
+    dy = abs(point1.y - point2.y)
     return math.sqrt(dx**2 + dy**2)
 
 
-def midpoint(thing, neighbor):
-    return (thing[0] + neighbor[0]) / 2, (thing[1] + neighbor[1]) / 2
-
+def midpoint(point1, point2):
+    return (point1.x + point2.x) / 2, (point1.y + point2.y) / 2
 
 def step():
-    to_add = []
-    global things
-    for thing in things:
-        for other_thing in things:
-            if other_thing == thing:
-                continue
-            else:
-                if lower_limit < distance(thing, other_thing) < limit:
-                    to_add.append(midpoint(thing, other_thing))
-                    print(f"created {midpoint(thing, other_thing)} for {other_thing}")
+    for a, b in itertools.combinations(bodies, 2):
+        distance = calc_distance(a,b)
+        if distance < TOO_CLOSE:
+            continue
 
-                    # this shit is broken
+        force = ATTRACTION_CONSTANT * (a.mass*b.mass)/(distance**1.2)
+        angle = math.atan2((b.y-a.y),(b.x-a.x))
 
-    things = things + to_add
+        # apply changes to velocity
+        a_accel = force / a.mass
+
+        a.vx += a_accel * math.cos(angle)
+        a.vy += a_accel * math.sin(angle)
+
+        b_accel = force / b.mass
+
+        b.vx += -b_accel * math.cos(angle)
+        b.vy += -b_accel * math.sin(angle)
+
+    for body in bodies:
+
+
+        # apply changes to position
+        body.x += body.vx
+        body.y += body.vy
+
+        # bounce off walls
+        if not (0 < body.x < WIDTH):
+            body.vx = -body.vx
+        if not (0 < body.y < HEIGHT):
+            body.vy = -body.vy
+
 
 def main():
     running = True
     red = 0
     green = 0
     blue = 0
+    on_vector = False
+    target_position = (0,0)
 
     while running:
         for event in pg.event.get():
@@ -58,8 +119,20 @@ def main():
                 running = False
 
             if event.type == pg.MOUSEBUTTONUP:
-                target_position = pg.mouse.get_pos()
-                things.append(target_position)
+                if not on_vector:
+                    target_position = pg.mouse.get_pos()
+                    on_vector = True
+                else:
+                    vector_position = pg.mouse.get_pos()
+
+                    bodies.append( Body(x=target_position[0],
+                                        y=target_position[1],
+                             vx = (vector_position[0] - target_position[0]) /
+                                  V_REDUCE,
+                             vy = (vector_position[1] - target_position[1])
+                                   / V_REDUCE))
+
+                    on_vector = False
 
             if event.type == pg.KEYUP:
                 if event.key == pg.K_ESCAPE:
@@ -83,9 +156,8 @@ def main():
         # drawing
 
         screen.fill((red, green, blue))
-        for thing in things:
-            pg.draw.circle(screen, (255-red, 255-green, 255-blue), thing,
-                           5)
+        for thing in bodies:
+            thing.draw(255-red, 255-green, 255-blue)
 
 
         pg.display.flip()
