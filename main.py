@@ -143,7 +143,11 @@ def main():
                 if event.key == pg.K_RIGHTBRACKET:
                     last_mass+=1
                 if event.key == pg.K_LEFTBRACKET:
-                    last_mass-=1 if last_mass >= 2 else 1
+                    last_mass = last_mass - 1 if last_mass >= 2 else 1
+                    print(last_mass)
+
+                if event.key == pg.K_r:
+                    bodies.clear()
 
                 if event.key == pg.K_q:
                     red += 10
